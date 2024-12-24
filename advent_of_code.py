@@ -66,7 +66,7 @@ def extract_parts(html: str) -> tuple[str, Optional[str]]:
 def download(
     year: Annotated[int, typer.Argument(help="Year of puzzle")],
     day: Annotated[int, typer.Argument(help="Day of puzzle")],
-) -> int:
+) -> None:
     """Download puzzle content and input."""
     session = get_session()
     headers = get_headers(session)
@@ -100,7 +100,7 @@ def download(
     input_path = puzzle_dir / "input.txt"
     input_path.write_text(input_response.text)
 
-    return 2 if part2 else 1
+    print(2 if part2 else 1)
 
 
 @app.command()
@@ -128,14 +128,14 @@ def submit(
     part: Annotated[int, typer.Argument(help="Part number (1 or 2)")],
 ) -> int:
     """Submit answer for puzzle."""
-    session = get_session()
-    headers = get_headers(session)
-
     puzzle_dir = ensure_puzzle_dir(year, day)
     answer_path = puzzle_dir / f"answer_part{part}.txt"
 
     if not answer_path.exists():
         raise typer.BadParameter(f"Answer file not found: {answer_path}")
+
+    session = get_session()
+    headers = get_headers(session)
 
     answer = answer_path.read_text().strip()
 

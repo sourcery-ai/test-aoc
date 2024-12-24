@@ -59,7 +59,7 @@ def test_extract_parts_both_parts() -> None:
 def test_download_command_no_session(temp_puzzle_dir: Path) -> None:
     """Test download command fails without session."""
     result = runner.invoke(app, ["download", "2023", "1"])
-    assert result.exit_code != 0
+    assert result.exit_code == 2
     assert "AOC_SESSION environment variable not set" in result.stdout
 
 
@@ -100,4 +100,4 @@ def test_update_results_command_creates_table(temp_puzzle_dir: Path) -> None:
     # Check README.md was created with table
     readme = Path("README.md").read_text()
     assert "| Day | Part 1 | Part 2 |" in readme
-    assert "| 1  | ✅" in readme
+    assert "|  1  | ✅" in readme
