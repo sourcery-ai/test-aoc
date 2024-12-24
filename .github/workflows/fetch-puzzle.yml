@@ -1,0 +1,75 @@
+name: Fetch Puzzle
+
+on:
+  schedule:
+    # Run at 17:00 UTC (5pm) from December 1-25
+    - cron: '0 17 1-25 12 *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Year of puzzle'
+        required: true
+        type: string
+      day:
+        description: 'Day of puzzle'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  AOC_SESSION: ${{ secrets.AOC_SESSION }}
+
+jobs:
+  fetch-puzzle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python with uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Download puzzle
+        id: download
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            YEAR="${{ github.event.inputs.year }}"
+            DAY="${{ github.event.inputs.day }}"
+          else
+            YEAR=$(date +%Y)
+            DAY=$(date +%-d)
+          fi
+          echo "Downloading puzzle for Year: $YEAR, Day: $DAY"
+          PART=$(uv run python advent_of_code.py download "$YEAR" "$DAY")
+          echo "part=$PART" >> "$GITHUB_OUTPUT"
+          echo "year=$YEAR" >> "$GITHUB_OUTPUT"
+          echo "day=$DAY" >> "$GITHUB_OUTPUT"
+
+      - name: Commit puzzle
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add puzzles/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add puzzle for Year ${{ steps.download.outputs.year }} Day ${{ steps.download.outputs.day }}"
+            git push
+          fi
+
+      - name: Trigger create puzzle issue workflow
+        run: |
+          gh workflow run create-puzzle-issue.yml \
+            -f year=${{ steps.download.outputs.year }} \
+            -f day=${{ steps.download.outputs.day }} \
+            -f part=${{ steps.download.outputs.part }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
